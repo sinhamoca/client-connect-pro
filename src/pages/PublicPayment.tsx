@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CreditCard, Calendar, User, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -23,16 +22,16 @@ const PublicPayment = () => {
     if (!token) { setNotFound(true); setLoading(false); return; }
 
     const fetchClient = async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("name, price_value, due_date, is_active, payment_type, plans(name)")
-        .eq("payment_token", token)
-        .maybeSingle();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-payment?token=${token}`;
+      const res = await fetch(url, {
+        headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      });
 
-      if (error || !data) {
+      if (!res.ok) {
         setNotFound(true);
       } else {
-        setClient(data as ClientPayment);
+        const json = await res.json();
+        setClient(json);
       }
       setLoading(false);
     };
