@@ -95,6 +95,33 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           created_at: string
@@ -185,6 +212,8 @@ export type Database = {
           subscription_start: string | null
           updated_at: string
           user_id: string
+          wuzapi_token: string | null
+          wuzapi_url: string | null
         }
         Insert: {
           created_at?: string
@@ -200,6 +229,8 @@ export type Database = {
           subscription_start?: string | null
           updated_at?: string
           user_id: string
+          wuzapi_token?: string | null
+          wuzapi_url?: string | null
         }
         Update: {
           created_at?: string
@@ -215,8 +246,51 @@ export type Database = {
           subscription_start?: string | null
           updated_at?: string
           user_id?: string
+          wuzapi_token?: string | null
+          wuzapi_url?: string | null
         }
         Relationships: []
+      }
+      reminders: {
+        Row: {
+          created_at: string
+          days_offset: number
+          id: string
+          is_active: boolean
+          name: string
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_offset?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_offset?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       servers: {
         Row: {

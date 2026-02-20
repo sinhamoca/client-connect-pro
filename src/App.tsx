@@ -9,7 +9,10 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Plans from "./pages/Plans";
 import Servers from "./pages/Servers";
-import ComingSoon from "./pages/ComingSoon";
+import Templates from "./pages/Templates";
+import Reminders from "./pages/Reminders";
+import Financial from "./pages/Financial";
+import PaymentSettings from "./pages/PaymentSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,10 +31,10 @@ const App = () => (
             <Route path="clients" element={<Clients />} />
             <Route path="plans" element={<Plans />} />
             <Route path="servers" element={<Servers />} />
-            <Route path="templates" element={<ComingSoon title="Templates de Mensagem" />} />
-            <Route path="reminders" element={<ComingSoon title="Lembretes Automáticos" />} />
-            <Route path="financial" element={<ComingSoon title="Dashboard Financeiro" />} />
-            <Route path="payments" element={<ComingSoon title="Configurações de Pagamento" />} />
+            <Route path="templates" element={<Templates />} />
+            <Route path="reminders" element={<Reminders />} />
+            <Route path="financial" element={<Financial />} />
+            <Route path="payments" element={<PaymentSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
