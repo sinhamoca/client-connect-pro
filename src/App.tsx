@@ -18,6 +18,7 @@ import PaymentSettings from "./pages/PaymentSettings";
 import PaymentConfig from "./pages/PaymentConfig";
 import ChangePassword from "./pages/ChangePassword";
 import RenewPlan from "./pages/RenewPlan";
+import RenewalLogs from "./pages/RenewalLogs";
 import NotFound from "./pages/NotFound";
 import PublicPayment from "./pages/PublicPayment";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="payment-config" element={<PaymentConfig />} />
               <Route path="change-password" element={<ChangePassword />} />
               <Route path="renew-plan" element={<RenewPlan />} />
+              <Route path="renewal-logs" element={<RenewalLogs />} />
             </Route>
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
