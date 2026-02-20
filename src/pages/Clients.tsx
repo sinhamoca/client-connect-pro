@@ -136,7 +136,7 @@ const Clients = () => {
                     <TableCell className="text-muted-foreground">{client.plans?.name || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{client.servers?.name || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {client.due_date ? new Date(client.due_date).toLocaleDateString("pt-BR") : "—"}
+                      {client.due_date ? (() => { const [y,m,d] = client.due_date!.split("-"); return `${d}/${m}/${y}`; })() : "—"}
                     </TableCell>
                     <TableCell>R$ {Number(client.price_value).toFixed(2)}</TableCell>
                     <TableCell>
