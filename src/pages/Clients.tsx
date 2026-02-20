@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { decryptValues } from "@/lib/crypto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,25 @@ const Clients = () => {
       .select("*, plans(name, duration_months), servers(name)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+
+    if (data && data.length > 0) {
+      // Decrypt all WhatsApp numbers in batch
+      const encryptedNumbers = data.map((c: any) => c.whatsapp_number).filter(Boolean);
+      if (encryptedNumbers.length > 0) {
+        try {
+          const decrypted = await decryptValues(encryptedNumbers);
+          let idx = 0;
+          for (const c of data as any[]) {
+            if (c.whatsapp_number) {
+              c.whatsapp_number = decrypted[idx++];
+            }
+          }
+        } catch (e) {
+          console.error("Failed to decrypt WhatsApp numbers:", e);
+        }
+      }
+    }
+
     setClients((data as any) || []);
     setLoading(false);
   };

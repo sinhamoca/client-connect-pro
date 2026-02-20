@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { encryptSingle, decryptSingle } from "@/lib/crypto";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -48,13 +49,18 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
 
   useEffect(() => {
     if (client) {
-      setForm({
-        name: client.name || "", whatsapp_number: client.whatsapp_number || "",
-        plan_id: client.plan_id || "", server_id: client.server_id || "",
-        price_value: String(client.price_value || ""), due_date: client.due_date || "",
-        notes: client.notes || "", username: client.username || "", suffix: client.suffix || "",
-        is_active: client.is_active ?? true, payment_type: client.payment_type || "pix",
-      });
+      // Decrypt whatsapp_number for editing
+      const loadClient = async () => {
+        const decryptedWhatsapp = await decryptSingle(client.whatsapp_number);
+        setForm({
+          name: client.name || "", whatsapp_number: decryptedWhatsapp || "",
+          plan_id: client.plan_id || "", server_id: client.server_id || "",
+          price_value: String(client.price_value || ""), due_date: client.due_date || "",
+          notes: client.notes || "", username: client.username || "", suffix: client.suffix || "",
+          is_active: client.is_active ?? true, payment_type: client.payment_type || "pix",
+        });
+      };
+      loadClient();
     } else {
       setForm({
         name: "", whatsapp_number: "", plan_id: "", server_id: "",
@@ -76,10 +82,14 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
       return;
     }
     setSaving(true);
+
+    // Encrypt WhatsApp number before saving
+    const encryptedWhatsapp = await encryptSingle(form.whatsapp_number || null);
+
     const payload = {
       user_id: user.id,
       name: form.name.trim(),
-      whatsapp_number: form.whatsapp_number || null,
+      whatsapp_number: encryptedWhatsapp,
       plan_id: form.plan_id || null,
       server_id: form.server_id || null,
       price_value: parseFloat(form.price_value) || 0,
