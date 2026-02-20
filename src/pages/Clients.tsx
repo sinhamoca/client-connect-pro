@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Search, Edit, Trash2, Loader2, Link2, RefreshCw, MessageCircle, Send, History } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Plus, Search, Edit, Trash2, Loader2, Link2, RefreshCw, MessageCircle, Send, History, ChevronLeft, ChevronRight } from "lucide-react";
 import { ClientModal } from "@/components/ClientModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,6 +35,7 @@ interface Client {
   plan_id: string | null;
   server_id: string | null;
   payment_token: string | null;
+  payment_type: string | null;
   plans: { name: string; duration_months: number } | null;
   servers: { name: string } | null;
 }
@@ -44,6 +48,13 @@ interface Payment {
   mp_status: string | null;
   created_at: string;
 }
+
+interface ServerOption {
+  id: string;
+  name: string;
+}
+
+const PAGE_SIZE = 10;
 
 const Clients = () => {
   const { user } = useAuth();
@@ -61,6 +72,15 @@ const Clients = () => {
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [whatsappConnected, setWhatsappConnected] = useState(false);
   const [wuzapiConfigured, setWuzapiConfigured] = useState(false);
+  const [pixKey, setPixKey] = useState<string | null>(null);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [serverFilter, setServerFilter] = useState("all");
+  const [serverOptions, setServerOptions] = useState<ServerOption[]>([]);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchClients = async () => {
     if (!user) return;
@@ -73,13 +93,13 @@ const Clients = () => {
     setLoading(false);
   };
 
-  // Check WhatsApp status
+  // Check WhatsApp status + fetch PIX key + servers
   useEffect(() => {
     if (!user) return;
-    const checkWa = async () => {
+    const init = async () => {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("wuzapi_url, wuzapi_token")
+        .select("wuzapi_url, wuzapi_token, pix_key")
         .eq("user_id", user.id)
         .single();
       if (profile?.wuzapi_url && profile?.wuzapi_token) {
@@ -92,11 +112,60 @@ const Clients = () => {
           setWhatsappConnected(parsed?.data?.Connected === true);
         } catch { /* ignore */ }
       }
+      if (profile?.pix_key) setPixKey(profile.pix_key);
+
+      const { data: srvs } = await supabase
+        .from("servers")
+        .select("id, name")
+        .eq("user_id", user.id);
+      setServerOptions(srvs || []);
     };
-    checkWa();
+    init();
   }, [user]);
 
   useEffect(() => { fetchClients(); }, [user]);
+
+  const getStatus = (client: Client) => {
+    if (!client.is_active) return { label: "Inativo", variant: "secondary" as const, key: "inactive" };
+    if (!client.due_date) return { label: "Ativo", variant: "default" as const, key: "active" };
+    const [y, m, d] = client.due_date.split("-").map(Number);
+    const due = new Date(y, m - 1, d);
+    const now = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    if (due < now) return { label: "Vencido", variant: "destructive" as const, key: "expired" };
+    const in7 = new Date(now.getTime() + 7 * 86400000);
+    if (due <= in7) return { label: "Vencendo", variant: "outline" as const, key: "expiring" };
+    return { label: "Ativo", variant: "default" as const, key: "active" };
+  };
+
+  const filtered = useMemo(() => {
+    let result = clients.filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.whatsapp_number?.includes(search) ||
+      c.username?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    if (statusFilter !== "all") {
+      result = result.filter(c => {
+        const s = getStatus(c).key;
+        if (statusFilter === "active") return s === "active" || s === "expiring";
+        if (statusFilter === "expired") return s === "expired";
+        if (statusFilter === "inactive") return s === "inactive";
+        return true;
+      });
+    }
+
+    if (serverFilter !== "all") {
+      result = result.filter(c => c.server_id === serverFilter);
+    }
+
+    return result;
+  }, [clients, search, statusFilter, serverFilter]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter, serverFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedClients = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -138,8 +207,8 @@ const Clients = () => {
   };
 
   const handleSendInvoice = async (client: Client) => {
-    if (!client.whatsapp_number || !client.payment_token) {
-      toast({ title: "Erro", description: "Cliente sem WhatsApp ou token de pagamento", variant: "destructive" });
+    if (!client.whatsapp_number) {
+      toast({ title: "Erro", description: "Cliente sem WhatsApp cadastrado", variant: "destructive" });
       return;
     }
     if (!whatsappConnected) {
@@ -148,7 +217,24 @@ const Clients = () => {
     }
     setSendingInvoice(client.id);
     try {
-      const link = `${window.location.origin}/pay/${client.payment_token}`;
+      let invoiceContent: string;
+
+      if (client.payment_type === "pix") {
+        if (!pixKey) {
+          toast({ title: "Erro", description: "Chave PIX não configurada. Vá em Configurações para cadastrar.", variant: "destructive" });
+          setSendingInvoice(null);
+          return;
+        }
+        invoiceContent = pixKey;
+      } else {
+        if (!client.payment_token) {
+          toast({ title: "Erro", description: "Cliente sem token de pagamento", variant: "destructive" });
+          setSendingInvoice(null);
+          return;
+        }
+        invoiceContent = `${window.location.origin}/pay/${client.payment_token}`;
+      }
+
       const phone = client.whatsapp_number.replace(/\D/g, "");
 
       await supabase.functions.invoke("wuzapi-proxy", {
@@ -157,11 +243,11 @@ const Clients = () => {
           method: "POST",
           body: {
             Phone: phone,
-            Body: link,
+            Body: invoiceContent,
           },
         },
       });
-      toast({ title: "Fatura enviada!", description: `Link enviado para ${client.whatsapp_number}` });
+      toast({ title: "Fatura enviada!", description: `Enviado para ${client.whatsapp_number}` });
     } catch (e: any) {
       toast({ title: "Erro ao enviar", description: e.message, variant: "destructive" });
     }
@@ -179,24 +265,6 @@ const Clients = () => {
     setPayments((data as Payment[]) || []);
     setLoadingPayments(false);
   };
-
-  const getStatus = (client: Client) => {
-    if (!client.is_active) return { label: "Inativo", variant: "secondary" as const };
-    if (!client.due_date) return { label: "Ativo", variant: "default" as const };
-    const [y, m, d] = client.due_date.split("-").map(Number);
-    const due = new Date(y, m - 1, d);
-    const now = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-    if (due < now) return { label: "Vencido", variant: "destructive" as const };
-    const in7 = new Date(now.getTime() + 7 * 86400000);
-    if (due <= in7) return { label: "Vencendo", variant: "outline" as const };
-    return { label: "Ativo", variant: "default" as const };
-  };
-
-  const filtered = clients.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.whatsapp_number?.includes(search) ||
-    c.username?.toLowerCase().includes(search.toLowerCase())
-  );
 
   const statusLabel = (s: string) => {
     const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -221,14 +289,39 @@ const Clients = () => {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, WhatsApp ou username..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search + Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, WhatsApp ou username..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="expired">Vencidos</SelectItem>
+            <SelectItem value="inactive">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={serverFilter} onValueChange={setServerFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Servidor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos servidores</SelectItem>
+            {serverOptions.map(s => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="glass-card rounded-xl overflow-hidden">
@@ -252,14 +345,14 @@ const Clients = () => {
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
-            ) : filtered.length === 0 ? (
+            ) : paginatedClients.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   Nenhum cliente encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((client) => {
+              paginatedClients.map((client) => {
                 const status = getStatus(client);
                 return (
                   <TableRow key={client.id} className="border-border/30 hover:bg-muted/30">
@@ -280,7 +373,6 @@ const Clients = () => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost" size="icon"
-                              title="Renovar manualmente"
                               onClick={() => handleRenew(client)}
                               disabled={renewingId === client.id}
                             >
@@ -294,7 +386,6 @@ const Clients = () => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost" size="icon"
-                              title="Abrir WhatsApp"
                               onClick={() => {
                                 if (client.whatsapp_number) {
                                   window.open(`https://wa.me/${client.whatsapp_number.replace(/\D/g, "")}`, "_blank");
@@ -313,7 +404,6 @@ const Clients = () => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost" size="icon"
-                              title="Enviar fatura via WhatsApp"
                               onClick={() => handleSendInvoice(client)}
                               disabled={sendingInvoice === client.id || !whatsappConnected}
                             >
@@ -325,7 +415,7 @@ const Clients = () => {
 
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" title="Histórico de pagamentos" onClick={() => openHistory(client)}>
+                            <Button variant="ghost" size="icon" onClick={() => openHistory(client)}>
                               <History className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
@@ -336,7 +426,6 @@ const Clients = () => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost" size="icon"
-                              title="Copiar link de pagamento"
                               onClick={() => {
                                 const link = `${window.location.origin}/pay/${client.payment_token}`;
                                 navigator.clipboard.writeText(link);
@@ -371,6 +460,32 @@ const Clients = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination Footer */}
+      {!loading && filtered.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Mostrando {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length} clientes
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline" size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span>Página {currentPage} de {totalPages}</span>
+            <Button
+              variant="outline" size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ClientModal
         open={modalOpen}
