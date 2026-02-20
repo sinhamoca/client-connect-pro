@@ -16,12 +16,14 @@ import Financial from "./pages/Financial";
 import PaymentSettings from "./pages/PaymentSettings";
 import PaymentConfig from "./pages/PaymentConfig";
 import ChangePassword from "./pages/ChangePassword";
+import RenewPlan from "./pages/RenewPlan";
 import NotFound from "./pages/NotFound";
 import PublicPayment from "./pages/PublicPayment";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminPlatformPlans from "./pages/admin/AdminPlatformPlans";
 
 const queryClient = new QueryClient();
 
@@ -47,12 +49,14 @@ const App = () => (
               <Route path="payments" element={<PaymentSettings />} />
               <Route path="payment-config" element={<PaymentConfig />} />
               <Route path="change-password" element={<ChangePassword />} />
+              <Route path="renew-plan" element={<RenewPlan />} />
             </Route>
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="/admin/users" replace />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="platform-plans" element={<AdminPlatformPlans />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

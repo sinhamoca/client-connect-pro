@@ -1,6 +1,6 @@
 import { Outlet, Navigate, NavLink } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
-import { Loader2, Users, Settings, LogOut, Shield } from "lucide-react";
+import { Loader2, Users, Settings, LogOut, Shield, Package, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLayout() {
@@ -39,6 +39,10 @@ export default function AdminLayout() {
           <NavLink to="/admin/users" className={linkClass}>
             <Users className="h-4 w-4" />
             <span>Usuários</span>
+          </NavLink>
+          <NavLink to="/admin/platform-plans" className={linkClass}>
+            <Package className="h-4 w-4" />
+            <span>Planos da Plataforma</span>
           </NavLink>
           <NavLink to="/admin/settings" className={linkClass}>
             <Settings className="h-4 w-4" />
