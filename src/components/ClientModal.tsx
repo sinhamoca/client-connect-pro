@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 
-interface Plan { id: string; name: string; }
+interface Plan { id: string; name: string; panel_credential_id?: string | null; }
+interface PanelCred { id: string; provider: string; }
 interface Server { id: string; name: string; }
 
 interface ClientModalProps {
@@ -30,17 +31,19 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
   const [saving, setSaving] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
+  const [panelCreds, setPanelCreds] = useState<PanelCred[]>([]);
 
   const [form, setForm] = useState({
     name: "", whatsapp_number: "", plan_id: "", server_id: "",
-    price_value: "", due_date: "", notes: "",
+    price_value: "", due_date: "", notes: "", username: "", suffix: "",
     is_active: true, payment_type: "pix",
   });
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("plans").select("id, name").eq("user_id", user.id).then(({ data }) => setPlans(data || []));
+    supabase.from("plans").select("id, name, panel_credential_id").eq("user_id", user.id).then(({ data }) => setPlans(data || []));
     supabase.from("servers").select("id, name").eq("user_id", user.id).then(({ data }) => setServers(data || []));
+    supabase.from("panel_credentials").select("id, provider").eq("user_id", user.id).then(({ data }) => setPanelCreds(data || []));
   }, [user]);
 
   useEffect(() => {
@@ -49,20 +52,29 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
         name: client.name || "", whatsapp_number: client.whatsapp_number || "",
         plan_id: client.plan_id || "", server_id: client.server_id || "",
         price_value: String(client.price_value || ""), due_date: client.due_date || "",
-        notes: client.notes || "",
+        notes: client.notes || "", username: client.username || "", suffix: client.suffix || "",
         is_active: client.is_active ?? true, payment_type: client.payment_type || "pix",
       });
     } else {
       setForm({
         name: "", whatsapp_number: "", plan_id: "", server_id: "",
-        price_value: "", due_date: "", notes: "",
+        price_value: "", due_date: "", notes: "", username: "", suffix: "",
         is_active: true, payment_type: "pix",
       });
     }
   }, [client, open]);
 
+  // Find provider from selected plan
+  const selectedPlan = plans.find(p => p.id === form.plan_id);
+  const panelCred = panelCreds.find(pc => pc.id === selectedPlan?.panel_credential_id);
+  const providerRequiresClientId = panelCred?.provider === "koffice" || panelCred?.provider === "club";
+
   const handleSave = async () => {
     if (!user || !form.name.trim()) return;
+    if (providerRequiresClientId && !form.username.trim()) {
+      toast({ title: "ID do cliente no painel é obrigatório", description: `O provider ${panelCred?.provider} exige o campo ID/Username.`, variant: "destructive" });
+      return;
+    }
     setSaving(true);
     const payload = {
       user_id: user.id,
@@ -73,6 +85,8 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
       price_value: parseFloat(form.price_value) || 0,
       due_date: form.due_date || null,
       notes: form.notes || null,
+      username: form.username || null,
+      suffix: form.suffix || null,
       is_active: form.is_active,
       payment_type: form.payment_type,
     };
@@ -149,6 +163,23 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
             <Switch checked={form.is_active} onCheckedChange={v => set("is_active", v)} />
             <Label>Ativo</Label>
           </div>
+
+          {/* Username / Client ID */}
+          <div className="space-y-2">
+            <Label>{providerRequiresClientId ? "ID do Cliente no Painel *" : "Username / ID no Painel"}</Label>
+            <Input value={form.username} onChange={e => set("username", e.target.value)} placeholder={providerRequiresClientId ? "Obrigatório para este provider" : "Opcional"} />
+            {providerRequiresClientId && (
+              <p className="text-xs text-destructive">Obrigatório para {panelCred?.provider}. Para múltiplas telas, separe IDs por vírgula.</p>
+            )}
+          </div>
+
+          {/* Suffix */}
+          <div className="space-y-2">
+            <Label>Sufixo Multi-Tela</Label>
+            <Input value={form.suffix} onChange={e => set("suffix", e.target.value)} placeholder="Ex: tela 1,tela 2,tela 3" />
+            <p className="text-xs text-muted-foreground">Separe por vírgula. Deixe vazio para 1 tela.</p>
+          </div>
+
           <div className="col-span-2 space-y-2">
             <Label>Observações</Label>
             <Input value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Notas..." />

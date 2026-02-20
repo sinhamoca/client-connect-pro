@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, CreditCard } from "lucide-react";
+import { Loader2, Save, CreditCard, Globe, Key } from "lucide-react";
 
 export default function AdminSettings() {
   const { toast } = useToast();
@@ -13,19 +13,26 @@ export default function AdminSettings() {
   const [trialDays, setTrialDays] = useState("30");
   const [mpToken, setMpToken] = useState("");
   const [savingMp, setSavingMp] = useState(false);
+  const [renewalUrl, setRenewalUrl] = useState("");
+  const [renewalKey, setRenewalKey] = useState("");
+  const [savingRenewal, setSavingRenewal] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from("system_settings")
         .select("key, value")
-        .in("key", ["default_trial_days", "admin_mp_access_token"]);
+        .in("key", ["default_trial_days", "admin_mp_access_token", "renewal_api_url", "renewal_api_key"]);
 
       if (data) {
         const trial = data.find(s => s.key === "default_trial_days");
         const mp = data.find(s => s.key === "admin_mp_access_token");
+        const rUrl = data.find(s => s.key === "renewal_api_url");
+        const rKey = data.find(s => s.key === "renewal_api_key");
         if (trial) setTrialDays(trial.value);
         if (mp) setMpToken(mp.value);
+        if (rUrl) setRenewalUrl(rUrl.value);
+        if (rKey) setRenewalKey(rKey.value);
       }
       setLoading(false);
     };
@@ -50,6 +57,19 @@ export default function AdminSettings() {
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else toast({ title: "Token do Mercado Pago salvo!" });
     setSavingMp(false);
+  };
+
+  const handleSaveRenewal = async () => {
+    setSavingRenewal(true);
+    const { error: e1 } = await supabase
+      .from("system_settings")
+      .upsert({ key: "renewal_api_url", value: renewalUrl.trim() }, { onConflict: "key" });
+    const { error: e2 } = await supabase
+      .from("system_settings")
+      .upsert({ key: "renewal_api_key", value: renewalKey.trim() }, { onConflict: "key" });
+    if (e1 || e2) toast({ title: "Erro", description: (e1 || e2)?.message, variant: "destructive" });
+    else toast({ title: "Configuração da API de Renovação salva!" });
+    setSavingRenewal(false);
   };
 
   if (loading) {
@@ -109,6 +129,39 @@ export default function AdminSettings() {
         <Button className="mt-4" onClick={handleSaveMp} disabled={savingMp}>
           {savingMp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Salvar Token
+        </Button>
+      </div>
+
+      <div className="glass-card rounded-xl p-6 max-w-xl">
+        <div className="flex items-center gap-3 mb-4">
+          <Globe className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold">API de Renovação IPTV</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Configure a URL e a chave da API externa de renovação. Todos os revendedores usarão estas credenciais.
+        </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>URL da API</Label>
+            <Input
+              value={renewalUrl}
+              onChange={(e) => setRenewalUrl(e.target.value)}
+              placeholder="http://178.156.241.26:4000/api/v1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>API Key</Label>
+            <Input
+              type="password"
+              value={renewalKey}
+              onChange={(e) => setRenewalKey(e.target.value)}
+              placeholder="irapi_live_xxxxx"
+            />
+          </div>
+        </div>
+        <Button className="mt-4" onClick={handleSaveRenewal} disabled={savingRenewal}>
+          {savingRenewal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Salvar Configuração
         </Button>
       </div>
     </div>
