@@ -9,6 +9,7 @@ import { DashboardLayout } from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Plans from "./pages/Plans";
+import Panels from "./pages/Panels";
 import Servers from "./pages/Servers";
 import Templates from "./pages/Templates";
 import Reminders from "./pages/Reminders";
@@ -42,6 +43,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="clients" element={<Clients />} />
               <Route path="plans" element={<Plans />} />
+              <Route path="panels" element={<Panels />} />
               <Route path="servers" element={<Servers />} />
               <Route path="templates" element={<Templates />} />
               <Route path="reminders" element={<Reminders />} />

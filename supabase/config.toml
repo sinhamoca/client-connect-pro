@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.platform-mp-webhook]
 verify_jwt = false
+
+[functions.renew-client]
+verify_jwt = false
+
+[functions.sigma-packages]
+verify_jwt = false

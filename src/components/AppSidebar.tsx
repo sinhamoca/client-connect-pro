@@ -1,6 +1,6 @@
 import {
   Users, LayoutDashboard, Package, Server, LogOut,
-  MessageSquare, Bell, CreditCard, BarChart3, Settings, Zap, KeyRound, Crown,
+  MessageSquare, Bell, CreditCard, BarChart3, Settings, Zap, KeyRound, Crown, Monitor,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -16,6 +16,7 @@ const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Clientes", url: "/dashboard/clients", icon: Users },
   { title: "Planos", url: "/dashboard/plans", icon: Package },
+  { title: "Painéis IPTV", url: "/dashboard/panels", icon: Monitor },
   { title: "Servidores", url: "/dashboard/servers", icon: Server },
 ];
 

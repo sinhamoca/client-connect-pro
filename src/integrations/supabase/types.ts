@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -122,6 +160,45 @@ export type Database = {
         }
         Relationships: []
       }
+      panel_credentials: {
+        Row: {
+          created_at: string
+          domain: string | null
+          id: string
+          is_active: boolean
+          label: string
+          password: string
+          provider: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          domain?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          password: string
+          provider: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          password?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -185,10 +262,12 @@ export type Database = {
           koffice_domain: string | null
           name: string
           num_screens: number
+          package_id: string | null
           painelfoda_domain: string | null
           painelfoda_package_id: string | null
           painelfoda_password: string | null
           painelfoda_username: string | null
+          panel_credential_id: string | null
           rush_type: string | null
           sigma_domain: string | null
           sigma_plan_code: string | null
@@ -209,10 +288,12 @@ export type Database = {
           koffice_domain?: string | null
           name: string
           num_screens?: number
+          package_id?: string | null
           painelfoda_domain?: string | null
           painelfoda_package_id?: string | null
           painelfoda_password?: string | null
           painelfoda_username?: string | null
+          panel_credential_id?: string | null
           rush_type?: string | null
           sigma_domain?: string | null
           sigma_plan_code?: string | null
@@ -233,16 +314,26 @@ export type Database = {
           koffice_domain?: string | null
           name?: string
           num_screens?: number
+          package_id?: string | null
           painelfoda_domain?: string | null
           painelfoda_package_id?: string | null
           painelfoda_password?: string | null
           painelfoda_username?: string | null
+          panel_credential_id?: string | null
           rush_type?: string | null
           sigma_domain?: string | null
           sigma_plan_code?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "plans_panel_credential_id_fkey"
+            columns: ["panel_credential_id"]
+            isOneToOne: false
+            referencedRelation: "panel_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_payments: {
         Row: {
@@ -427,6 +518,56 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renewal_retry_queue: {
+        Row: {
+          attempt: number
+          client_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          max_attempts: number
+          next_retry_at: string
+          payload: Json
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt?: number
+          client_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at: string
+          payload: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string
+          payload?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renewal_retry_queue_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
