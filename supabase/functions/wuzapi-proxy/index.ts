@@ -63,8 +63,9 @@ Deno.serve(async (req) => {
 
     const data = await response.text();
 
-    return new Response(data, {
-      status: response.status,
+    // Always return 200 so supabase.functions.invoke doesn't treat WuzAPI errors as failures
+    return new Response(JSON.stringify({ wuzapi_status: response.status, wuzapi_response: data }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

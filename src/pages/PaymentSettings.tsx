@@ -69,6 +69,9 @@ const PaymentSettings = () => {
       });
       if (error) {
         toast({ title: "Falha na conexão", description: error.message, variant: "destructive" });
+      } else if (data?.wuzapi_status !== 200) {
+        const parsed = typeof data?.wuzapi_response === "string" ? JSON.parse(data.wuzapi_response) : data?.wuzapi_response;
+        toast({ title: "WuzAPI respondeu com erro", description: parsed?.error || `Status: ${data?.wuzapi_status}`, variant: "destructive" });
       } else {
         toast({ title: "Conexão bem sucedida!", description: "WuzAPI está respondendo." });
       }
