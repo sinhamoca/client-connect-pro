@@ -56,23 +56,24 @@ const PaymentSettings = () => {
       toast({ title: "Preencha URL e Token primeiro", variant: "destructive" });
       return;
     }
+    // Save first so the proxy can read credentials
+    await handleSave();
     setTesting(true);
     try {
-      const res = await fetch(`${form.wuzapi_url.trim()}/chat/presence`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Token": form.wuzapi_token.trim(),
+      const { data, error } = await supabase.functions.invoke("wuzapi-proxy", {
+        body: {
+          endpoint: "/chat/presence",
+          method: "POST",
+          body: { Phone: "5500000000000" },
         },
-        body: JSON.stringify({ Phone: "5500000000000" }),
       });
-      if (res.ok) {
-        toast({ title: "Conexão bem sucedida!", description: "WuzAPI está respondendo." });
+      if (error) {
+        toast({ title: "Falha na conexão", description: error.message, variant: "destructive" });
       } else {
-        toast({ title: "Falha na conexão", description: `Status: ${res.status}`, variant: "destructive" });
+        toast({ title: "Conexão bem sucedida!", description: "WuzAPI está respondendo." });
       }
     } catch {
-      toast({ title: "Erro de conexão", description: "Não foi possível conectar ao WuzAPI. Verifique a URL.", variant: "destructive" });
+      toast({ title: "Erro de conexão", description: "Não foi possível conectar ao WuzAPI.", variant: "destructive" });
     }
     setTesting(false);
   };
