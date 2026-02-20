@@ -1,6 +1,6 @@
 import {
   Users, LayoutDashboard, Package, Server, LogOut,
-  MessageSquare, Bell, CreditCard, BarChart3, Settings, Zap, KeyRound,
+  MessageSquare, Bell, CreditCard, BarChart3, Settings, Zap, KeyRound, Crown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -29,6 +29,7 @@ const financeItems = [
   { title: "Pagamentos", url: "/dashboard/payment-config", icon: CreditCard },
   { title: "Configurações", url: "/dashboard/payments", icon: Settings },
   { title: "Alterar Senha", url: "/dashboard/change-password", icon: KeyRound },
+  { title: "Renovar Plano", url: "/dashboard/renew-plan", icon: Crown },
 ];
 
 export function AppSidebar() {

@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.send-reminders]
 verify_jwt = false
+
+[functions.create-platform-payment]
+verify_jwt = false
+
+[functions.platform-mp-webhook]
+verify_jwt = false
