@@ -91,14 +91,13 @@ Deno.serve(async (req) => {
       })
       .eq("id", paymentRecord.id);
 
-    // If approved, extend client due_date
+    // If approved, extend client due_date and trigger IPTV renewal
     if (mpData.status === "approved") {
       const client = paymentRecord.clients;
       if (client) {
         const durationMonths = client.plans?.duration_months || 1;
         const currentDue = client.due_date ? new Date(client.due_date + "T12:00:00") : new Date();
         const now = new Date();
-        // If current due is in the past, extend from today
         const baseDate = currentDue < now ? now : currentDue;
         baseDate.setMonth(baseDate.getMonth() + durationMonths);
         
@@ -108,6 +107,97 @@ Deno.serve(async (req) => {
           .from("clients")
           .update({ due_date: newDue, is_active: true })
           .eq("payment_token", client.payment_token);
+
+        // Trigger IPTV renewal if client has a plan with panel_credential_id
+        try {
+          const clientId = paymentRecord.client_id;
+          const { data: fullClient } = await supabase
+            .from("clients")
+            .select("*, plans!clients_plan_id_fkey(*, panel_credentials:panel_credential_id(*))")
+            .eq("id", clientId)
+            .single();
+
+          if (fullClient?.plans?.panel_credential_id) {
+            const plan = fullClient.plans;
+            const cred = plan.panel_credentials;
+
+            if (cred) {
+              const { data: settings } = await supabase
+                .from("system_settings")
+                .select("key, value")
+                .in("key", ["renewal_api_url", "renewal_api_key"]);
+
+              const apiUrl = settings?.find((s: any) => s.key === "renewal_api_url")?.value;
+              const apiKey = settings?.find((s: any) => s.key === "renewal_api_key")?.value;
+
+              if (apiUrl && apiKey) {
+                const payload: any = {
+                  provider: cred.provider,
+                  credentials: { username: cred.username, password: cred.password },
+                  client_name: fullClient.name,
+                  months: plan.duration_months,
+                  telas: plan.num_screens || 1,
+                };
+
+                if (fullClient.suffix) payload.suffix = fullClient.suffix;
+                if (fullClient.username) payload.client_id = fullClient.username;
+
+                switch (cred.provider) {
+                  case "sigma":
+                    payload.sigma_domain = cred.domain;
+                    payload.sigma_plan_code = plan.package_id;
+                    break;
+                  case "koffice":
+                    payload.koffice_domain = cred.domain;
+                    payload.client_id = fullClient.username;
+                    break;
+                  case "painelfoda":
+                    payload.painelfoda_domain = cred.domain;
+                    payload.painelfoda_package_id = plan.painelfoda_package_id;
+                    break;
+                  case "rush":
+                    payload.rush_type = plan.rush_type || "IPTV";
+                    break;
+                  case "club":
+                    payload.client_id = fullClient.username;
+                    break;
+                }
+
+                const apiResponse = await fetch(`${apiUrl}/renew`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+                  body: JSON.stringify(payload),
+                });
+
+                const result = await apiResponse.json();
+
+                // Log activity
+                await supabase.from("activity_logs").insert({
+                  user_id: userId,
+                  client_id: clientId,
+                  type: "renewal",
+                  status: result.success ? "success" : "error",
+                  details: result,
+                });
+
+                // If failed, queue for retry
+                if (!result.success) {
+                  await supabase.from("renewal_retry_queue").insert({
+                    user_id: userId,
+                    client_id: clientId,
+                    attempt: 1,
+                    next_retry_at: new Date(Date.now() + 5 * 60000).toISOString(),
+                    payload,
+                    last_error: result.error || "Unknown error",
+                    status: "pending",
+                  });
+                }
+              }
+            }
+          }
+        } catch (renewErr) {
+          console.error("IPTV renewal error:", renewErr);
+        }
       }
     }
 

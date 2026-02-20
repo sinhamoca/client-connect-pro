@@ -13,7 +13,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, Loader2, Link2, RefreshCw, MessageCircle, Send, History, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, Link2, RefreshCw, MessageCircle, Send, History, ChevronLeft, ChevronRight, Tv } from "lucide-react";
 import { ClientModal } from "@/components/ClientModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -66,6 +66,7 @@ const Clients = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [renewingId, setRenewingId] = useState<string | null>(null);
+  const [renewingIptvId, setRenewingIptvId] = useState<string | null>(null);
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null);
   const [historyClient, setHistoryClient] = useState<Client | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -204,6 +205,24 @@ const Clients = () => {
       fetchClients();
     }
     setRenewingId(null);
+  };
+
+  const handleRenewIptv = async (client: Client) => {
+    setRenewingIptvId(client.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("renew-client", {
+        body: { client_id: client.id },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.success) {
+        toast({ title: "IPTV renovado!", description: `Cliente ${client.name} renovado no painel IPTV.` });
+      } else {
+        toast({ title: "Erro na renovação IPTV", description: data?.error || "Falha ao renovar no painel", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
+    setRenewingIptvId(null);
   };
 
   const handleSendInvoice = async (client: Client) => {
@@ -380,6 +399,19 @@ const Clients = () => {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Renovar</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => handleRenewIptv(client)}
+                              disabled={renewingIptvId === client.id}
+                            >
+                              {renewingIptvId === client.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tv className="h-4 w-4" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Renovar IPTV</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>
