@@ -3,6 +3,7 @@ import {
   MessageSquare, Bell, CreditCard, BarChart3, Settings, Zap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -117,14 +118,17 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 text-sidebar-foreground hover:text-destructive hover:bg-destructive/10"
-          onClick={signOut}
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sair</span>
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            className="flex-1 justify-start gap-3 text-sidebar-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={signOut}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sair</span>
+          </Button>
+          <ThemeToggle />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
