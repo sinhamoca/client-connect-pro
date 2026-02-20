@@ -13,6 +13,7 @@ import Templates from "./pages/Templates";
 import Reminders from "./pages/Reminders";
 import Financial from "./pages/Financial";
 import PaymentSettings from "./pages/PaymentSettings";
+import PaymentConfig from "./pages/PaymentConfig";
 import NotFound from "./pages/NotFound";
 import PublicPayment from "./pages/PublicPayment";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="reminders" element={<Reminders />} />
             <Route path="financial" element={<Financial />} />
             <Route path="payments" element={<PaymentSettings />} />
+            <Route path="payment-config" element={<PaymentConfig />} />
           </Route>
           {/* Admin routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
