@@ -114,14 +114,20 @@ Deno.serve(async (req) => {
       for (let i = 0; i < clients.length; i++) {
         const client = clients[i];
 
+        // Get app URL for payment links
+        const { data: appUrlSetting } = await supabase
+          .from("system_settings")
+          .select("value")
+          .eq("key", "app_url")
+          .single();
+        const appUrl = (appUrlSetting?.value || "").replace(/\/+$/, "");
+
         // Build {link_pagamento} based on payment_type
         let linkPagamento = "";
         if (client.payment_type === "pix" && profile.pix_key) {
           linkPagamento = profile.pix_key;
-        } else if (client.payment_token) {
-          // We need the app URL - use SUPABASE_URL to derive it or use a fallback
-          // For link type, we construct the payment URL
-          linkPagamento = `https://${Deno.env.get("SUPABASE_URL")?.replace("https://", "").replace(".supabase.co", "")}-preview--*.lovable.app/pay/${client.payment_token}`;
+        } else if (client.payment_token && appUrl) {
+          linkPagamento = `${appUrl}/pay/${client.payment_token}`;
         }
 
         // Replace template variables
