@@ -181,7 +181,10 @@ export default function AdminUsers() {
       .eq("key", "default_trial_days")
       .single();
     const days = parseInt(setting?.value || "30");
-    const newEnd = new Date(Date.now() + days * 86400000).toISOString();
+    // Extend from current expiration or from now, whichever is later
+    const currentEnd = user.subscription_end ? new Date(user.subscription_end) : new Date();
+    const baseDate = currentEnd > new Date() ? currentEnd : new Date();
+    const newEnd = new Date(baseDate.getTime() + days * 86400000).toISOString();
 
     const { error } = await supabase.from("profiles")
       .update({ subscription_end: newEnd, is_active: true })
