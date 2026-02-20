@@ -5,6 +5,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ---- Encryption helpers (same logic as crypto-utils) ----
+const ALGORITHM = "AES-GCM";
+
+async function getKey(): Promise<CryptoKey> {
+  const raw = Deno.env.get("ENCRYPTION_KEY")!;
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return crypto.subtle.importKey("raw", hash, { name: ALGORITHM }, false, ["decrypt"]);
+}
+
+function fromHex(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+async function decryptValue(encrypted: string, key: CryptoKey): Promise<string> {
+  if (!encrypted.startsWith("enc:")) return encrypted;
+  const parts = encrypted.split(":");
+  if (parts.length !== 3) return encrypted;
+  const iv = fromHex(parts[1]);
+  const ciphertext = fromHex(parts[2]);
+  const decrypted = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, ciphertext);
+  return new TextDecoder().decode(decrypted);
+}
+// ---- End encryption helpers ----
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -15,6 +43,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    const encKey = await getKey();
 
     // Current time in UTC-3 (Brasília)
     const now = new Date();
@@ -104,7 +134,6 @@ Deno.serve(async (req) => {
 
       if (!clients || clients.length === 0) {
         console.log(`[send-reminders] No clients with due_date ${targetDueDate} for reminder "${reminder.name}"`);
-        // Still mark as sent so we don't re-check
         await supabase.from("reminders").update({ last_sent_date: todayStr }).eq("id", reminder.id);
         continue;
       }
@@ -113,6 +142,14 @@ Deno.serve(async (req) => {
 
       for (let i = 0; i < clients.length; i++) {
         const client = clients[i];
+
+        // Decrypt WhatsApp number
+        let whatsappNumber = client.whatsapp_number;
+        try {
+          whatsappNumber = await decryptValue(whatsappNumber, encKey);
+        } catch (e) {
+          console.error(`[send-reminders] Failed to decrypt number for client ${client.id}:`, e.message);
+        }
 
         // Get app URL for payment links
         const { data: appUrlSetting } = await supabase
@@ -140,10 +177,10 @@ Deno.serve(async (req) => {
           .replace(/\{vencimento\}/g, dueFormatted)
           .replace(/\{valor\}/g, `R$ ${Number(client.price_value || 0).toFixed(2)}`)
           .replace(/\{plano\}/g, client.plans?.name || "")
-          .replace(/\{whatsapp\}/g, client.whatsapp_number || "")
+          .replace(/\{whatsapp\}/g, whatsappNumber || "")
           .replace(/\{link_pagamento\}/g, linkPagamento);
 
-        const phone = client.whatsapp_number.replace(/\D/g, "");
+        const phone = whatsappNumber.replace(/\D/g, "");
 
         try {
           await fetch(`${profile.wuzapi_url.replace(/\/+$/, "")}/chat/send/text`, {

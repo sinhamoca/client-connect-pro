@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.sigma-packages]
 verify_jwt = false
+
+[functions.crypto-utils]
+verify_jwt = false
