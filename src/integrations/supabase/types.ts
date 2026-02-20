@@ -310,7 +310,9 @@ export type Database = {
           days_offset: number
           id: string
           is_active: boolean
+          last_sent_date: string | null
           name: string
+          send_time: string
           template_id: string | null
           updated_at: string
           user_id: string
@@ -320,7 +322,9 @@ export type Database = {
           days_offset?: number
           id?: string
           is_active?: boolean
+          last_sent_date?: string | null
           name: string
+          send_time?: string
           template_id?: string | null
           updated_at?: string
           user_id: string
@@ -330,7 +334,9 @@ export type Database = {
           days_offset?: number
           id?: string
           is_active?: boolean
+          last_sent_date?: string | null
           name?: string
+          send_time?: string
           template_id?: string | null
           updated_at?: string
           user_id?: string
