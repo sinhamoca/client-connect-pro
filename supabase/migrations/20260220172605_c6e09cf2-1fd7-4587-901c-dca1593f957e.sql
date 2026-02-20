@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN pix_key text DEFAULT null;

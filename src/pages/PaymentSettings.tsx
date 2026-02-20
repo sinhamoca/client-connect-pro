@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Loader2, Wifi, WifiOff, QrCode, LogOut, CheckCircle2, RefreshCw,
+  Loader2, Wifi, WifiOff, QrCode, LogOut, CheckCircle2, RefreshCw, Save, Key,
 } from "lucide-react";
 
 type SessionStatus = "disconnected" | "connecting" | "connected" | "unknown";
@@ -14,6 +16,10 @@ const PaymentSettings = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
+
+  // PIX key
+  const [pixKey, setPixKey] = useState("");
+  const [savingPix, setSavingPix] = useState(false);
 
   // Session / QR state
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("unknown");
@@ -27,16 +33,32 @@ const PaymentSettings = () => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("wuzapi_url, wuzapi_token")
+        .select("wuzapi_url, wuzapi_token, pix_key")
         .eq("user_id", user.id)
         .single();
       if (data) {
         setConfigured(!!(data.wuzapi_url && data.wuzapi_token));
+        setPixKey(data.pix_key || "");
       }
       setLoading(false);
     };
     fetchProfile();
   }, [user]);
+
+  const handleSavePixKey = async () => {
+    if (!user) return;
+    setSavingPix(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ pix_key: pixKey.trim() || null })
+      .eq("user_id", user.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Chave PIX salva!" });
+    }
+    setSavingPix(false);
+  };
 
   const callProxy = useCallback(async (endpoint: string, method = "GET", body?: any) => {
     const { data, error } = await supabase.functions.invoke("wuzapi-proxy", {
@@ -143,7 +165,34 @@ const PaymentSettings = () => {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold">Configurações</h1>
-        <p className="text-muted-foreground">Gerencie sua conexão WhatsApp</p>
+        <p className="text-muted-foreground">Gerencie sua conexão WhatsApp e pagamentos</p>
+      </div>
+
+      {/* PIX Key Card */}
+      <div className="glass-card rounded-xl p-6 max-w-xl">
+        <div className="flex items-center gap-3 mb-4">
+          <Key className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold">Chave PIX</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Cadastre sua chave PIX para pagamentos sem automação. Quando o cliente estiver configurado como "PIX", 
+          a variável <code className="bg-muted px-1 rounded">{"{link_pagamento}"}</code> enviará esta chave ao invés do link.
+        </p>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Label htmlFor="pix-key" className="sr-only">Chave PIX</Label>
+            <Input
+              id="pix-key"
+              value={pixKey}
+              onChange={(e) => setPixKey(e.target.value)}
+              placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+            />
+          </div>
+          <Button onClick={handleSavePixKey} disabled={savingPix}>
+            {savingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Salvar
+          </Button>
+        </div>
       </div>
 
       {/* WhatsApp Session Card */}
@@ -221,6 +270,7 @@ const PaymentSettings = () => {
           <li>1. O administrador configura as credenciais WuzAPI para sua conta</li>
           <li>2. Clique em <strong>Conectar WhatsApp</strong> e escaneie o QR Code</li>
           <li>3. Os lembretes automáticos usarão esta conexão para enviar mensagens</li>
+          <li>4. Configure a <strong>Chave PIX</strong> para clientes que pagam via PIX sem automação</li>
         </ul>
       </div>
     </div>
