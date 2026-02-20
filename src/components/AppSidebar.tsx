@@ -25,6 +25,7 @@ const automationItems = [
 
 const financeItems = [
   { title: "Financeiro", url: "/dashboard/financial", icon: BarChart3 },
+  { title: "Pagamentos", url: "/dashboard/payment-config", icon: CreditCard },
   { title: "Configurações", url: "/dashboard/payments", icon: Settings },
 ];
 

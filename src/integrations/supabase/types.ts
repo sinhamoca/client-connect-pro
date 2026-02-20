@@ -122,6 +122,53 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          id: string
+          mp_payment_id: string | null
+          mp_status: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          client_id: string
+          created_at?: string
+          id?: string
+          mp_payment_id?: string | null
+          mp_status?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          mp_payment_id?: string | null
+          mp_status?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           created_at: string
@@ -205,6 +252,7 @@ export type Database = {
           is_active: boolean
           max_clients: number
           max_instances: number
+          mercadopago_access_token: string | null
           messages_per_minute: number
           name: string
           phone: string | null
@@ -222,6 +270,7 @@ export type Database = {
           is_active?: boolean
           max_clients?: number
           max_instances?: number
+          mercadopago_access_token?: string | null
           messages_per_minute?: number
           name?: string
           phone?: string | null
@@ -239,6 +288,7 @@ export type Database = {
           is_active?: boolean
           max_clients?: number
           max_instances?: number
+          mercadopago_access_token?: string | null
           messages_per_minute?: number
           name?: string
           phone?: string | null

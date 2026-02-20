@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.public-payment]
 verify_jwt = false
+
+[functions.create-payment]
+verify_jwt = false
+
+[functions.mp-webhook]
+verify_jwt = false
