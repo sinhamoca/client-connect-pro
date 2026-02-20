@@ -25,6 +25,7 @@ const VARIABLES = [
   { key: "{valor}", desc: "Valor do plano" },
   { key: "{plano}", desc: "Nome do plano" },
   { key: "{whatsapp}", desc: "WhatsApp do cliente" },
+  { key: "{link_pagamento}", desc: "Link de pagamento" },
 ];
 
 const Templates = () => {

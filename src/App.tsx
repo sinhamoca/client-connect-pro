@@ -14,6 +14,7 @@ import Reminders from "./pages/Reminders";
 import Financial from "./pages/Financial";
 import PaymentSettings from "./pages/PaymentSettings";
 import NotFound from "./pages/NotFound";
+import PublicPayment from "./pages/PublicPayment";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -30,6 +31,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/pay/:token" element={<PublicPayment />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="clients" element={<Clients />} />

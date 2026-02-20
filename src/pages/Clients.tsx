@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, Link2 } from "lucide-react";
 import { ClientModal } from "@/components/ClientModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -25,6 +25,7 @@ interface Client {
   username: string | null;
   plan_id: string | null;
   server_id: string | null;
+  payment_token: string | null;
   plans: { name: string } | null;
   servers: { name: string } | null;
 }
@@ -46,6 +47,7 @@ const Clients = () => {
       .select("*, plans(name), servers(name)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    setClients((data as any) || []);
     setClients((data as any) || []);
     setLoading(false);
   };
@@ -144,6 +146,17 @@ const Clients = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost" size="icon"
+                          title="Copiar link de pagamento"
+                          onClick={() => {
+                            const link = `${window.location.origin}/pay/${client.payment_token}`;
+                            navigator.clipboard.writeText(link);
+                            toast({ title: "Link copiado!", description: link });
+                          }}
+                        >
+                          <Link2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost" size="icon"
                           onClick={() => { setEditingClient(client); setModalOpen(true); }}
