@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, Save, Wifi, WifiOff, QrCode, LogOut, CheckCircle2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Loader2, Wifi, WifiOff, QrCode, LogOut, CheckCircle2, RefreshCw,
+} from "lucide-react";
 
 type SessionStatus = "disconnected" | "connecting" | "connected" | "unknown";
 
@@ -13,8 +13,6 @@ const PaymentSettings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ wuzapi_url: "", wuzapi_token: "" });
   const [configured, setConfigured] = useState(false);
 
   // Session / QR state
@@ -33,10 +31,6 @@ const PaymentSettings = () => {
         .eq("user_id", user.id)
         .single();
       if (data) {
-        setForm({
-          wuzapi_url: data.wuzapi_url || "",
-          wuzapi_token: data.wuzapi_token || "",
-        });
         setConfigured(!!(data.wuzapi_url && data.wuzapi_token));
       }
       setLoading(false);
@@ -55,7 +49,6 @@ const PaymentSettings = () => {
     return { status: data?.wuzapi_status, data: parsed };
   }, []);
 
-  // Check WhatsApp session status
   const checkStatus = useCallback(async () => {
     if (!configured) return;
     setCheckingStatus(true);
@@ -73,33 +66,10 @@ const PaymentSettings = () => {
     setCheckingStatus(false);
   }, [configured, callProxy]);
 
-  // Check status on load when configured
   useEffect(() => {
-    if (configured && !loading) {
-      checkStatus();
-    }
+    if (configured && !loading) checkStatus();
   }, [configured, loading, checkStatus]);
 
-  const handleSave = async () => {
-    if (!user) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ wuzapi_url: form.wuzapi_url.trim() || null, wuzapi_token: form.wuzapi_token.trim() || null })
-      .eq("user_id", user.id);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else {
-      toast({ title: "Configurações salvas" });
-      const isConfigured = !!(form.wuzapi_url.trim() && form.wuzapi_token.trim());
-      setConfigured(isConfigured);
-      if (isConfigured) {
-        setTimeout(() => checkStatus(), 500);
-      }
-    }
-    setSaving(false);
-  };
-
-  // Connect and get QR code
   const connectSession = async () => {
     setConnecting(true);
     setQrCode(null);
@@ -111,20 +81,18 @@ const PaymentSettings = () => {
       if (res.data?.data?.qrcode) {
         setQrCode(res.data.data.qrcode);
         setSessionStatus("connecting");
-        // Poll for connection status
         pollForConnection();
       } else if (res.data?.data?.Connected) {
         setSessionStatus("connected");
         toast({ title: "WhatsApp já está conectado!" });
       } else {
-        // Try getting QR separately
         const qrRes = await callProxy("/session/qr", "GET");
         if (qrRes.data?.data?.qrcode) {
           setQrCode(qrRes.data.data.qrcode);
           setSessionStatus("connecting");
           pollForConnection();
         } else {
-          toast({ title: "Não foi possível obter QR code", description: JSON.stringify(res.data?.error || "Erro desconhecido"), variant: "destructive" });
+          toast({ title: "Não foi possível obter QR code", variant: "destructive" });
         }
       }
     } catch (e: any) {
@@ -133,15 +101,11 @@ const PaymentSettings = () => {
     setConnecting(false);
   };
 
-  // Poll status every 5s while connecting
   const pollForConnection = () => {
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      if (attempts > 24) { // 2 minutes max
-        clearInterval(interval);
-        return;
-      }
+      if (attempts > 24) { clearInterval(interval); return; }
       try {
         const res = await callProxy("/session/status", "GET");
         if (res.status === 200 && res.data?.data?.Connected) {
@@ -150,13 +114,10 @@ const PaymentSettings = () => {
           clearInterval(interval);
           toast({ title: "WhatsApp conectado com sucesso!" });
         }
-      } catch {
-        // ignore polling errors
-      }
+      } catch { /* ignore */ }
     }, 5000);
   };
 
-  // Disconnect / Logout
   const disconnectSession = async () => {
     setDisconnecting(true);
     try {
@@ -182,55 +143,11 @@ const PaymentSettings = () => {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold">Configurações</h1>
-        <p className="text-muted-foreground">Configure a integração com WhatsApp via WuzAPI</p>
-      </div>
-
-      {/* Credentials Card */}
-      <div className="glass-card rounded-xl p-6 max-w-xl">
-        <div className="flex items-center gap-3 mb-6">
-          {configured ? (
-            <Wifi className="h-5 w-5 text-success" />
-          ) : (
-            <WifiOff className="h-5 w-5 text-muted-foreground" />
-          )}
-          <div>
-            <h2 className="font-semibold">Credenciais WuzAPI</h2>
-            <p className="text-sm text-muted-foreground">
-              {configured ? "Configurado" : "Não configurado"}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>URL da API</Label>
-            <Input
-              value={form.wuzapi_url}
-              onChange={e => setForm(f => ({ ...f, wuzapi_url: e.target.value }))}
-              placeholder="http://seu-servidor:8080"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Token de Acesso</Label>
-            <Input
-              type="password"
-              value={form.wuzapi_token}
-              onChange={e => setForm(f => ({ ...f, wuzapi_token: e.target.value }))}
-              placeholder="Seu token WuzAPI"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Salvar
-          </Button>
-        </div>
+        <p className="text-muted-foreground">Gerencie sua conexão WhatsApp</p>
       </div>
 
       {/* WhatsApp Session Card */}
-      {configured && (
+      {configured ? (
         <div className="glass-card rounded-xl p-6 max-w-xl">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -256,7 +173,6 @@ const PaymentSettings = () => {
             </Button>
           </div>
 
-          {/* QR Code display */}
           {qrCode && sessionStatus === "connecting" && (
             <div className="flex flex-col items-center gap-4 mb-6 p-4 bg-white rounded-lg">
               <img
@@ -273,25 +189,28 @@ const PaymentSettings = () => {
           <div className="flex gap-3">
             {sessionStatus !== "connected" && (
               <Button onClick={connectSession} disabled={connecting}>
-                {connecting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <QrCode className="mr-2 h-4 w-4" />
-                )}
+                {connecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
                 {qrCode ? "Gerar novo QR Code" : "Conectar WhatsApp"}
               </Button>
             )}
             {sessionStatus === "connected" && (
               <Button variant="destructive" onClick={disconnectSession} disabled={disconnecting}>
-                {disconnecting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <LogOut className="mr-2 h-4 w-4" />
-                )}
+                {disconnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
                 Desconectar
               </Button>
             )}
           </div>
+        </div>
+      ) : (
+        <div className="glass-card rounded-xl p-6 max-w-xl">
+          <div className="flex items-center gap-3 mb-4">
+            <WifiOff className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-semibold">WhatsApp não configurado</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            O administrador do sistema precisa configurar as credenciais WuzAPI para sua conta.
+            Entre em contato com o administrador para habilitar o envio de mensagens via WhatsApp.
+          </p>
         </div>
       )}
 
@@ -299,10 +218,9 @@ const PaymentSettings = () => {
       <div className="glass-card rounded-xl p-6 max-w-xl">
         <h2 className="font-semibold mb-2">Como funciona?</h2>
         <ul className="text-sm text-muted-foreground space-y-2">
-          <li>1. Instale e configure o <strong>WuzAPI</strong> na sua VPS</li>
-          <li>2. Insira a URL e o Token acima e salve</li>
-          <li>3. Clique em <strong>Conectar WhatsApp</strong> e escaneie o QR Code</li>
-          <li>4. Os lembretes automáticos usarão esta conexão para enviar mensagens</li>
+          <li>1. O administrador configura as credenciais WuzAPI para sua conta</li>
+          <li>2. Clique em <strong>Conectar WhatsApp</strong> e escaneie o QR Code</li>
+          <li>3. Os lembretes automáticos usarão esta conexão para enviar mensagens</li>
         </ul>
       </div>
     </div>

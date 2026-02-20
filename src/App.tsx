@@ -14,6 +14,10 @@ import Reminders from "./pages/Reminders";
 import Financial from "./pages/Financial";
 import PaymentSettings from "./pages/PaymentSettings";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +39,13 @@ const App = () => (
             <Route path="reminders" element={<Reminders />} />
             <Route path="financial" element={<Financial />} />
             <Route path="payments" element={<PaymentSettings />} />
+          </Route>
+          {/* Admin routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
