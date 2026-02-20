@@ -33,8 +33,7 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
 
   const [form, setForm] = useState({
     name: "", whatsapp_number: "", plan_id: "", server_id: "",
-    price_value: "", due_date: "", username: "", suffix: "",
-    password: "", mac_address: "", device_key: "", notes: "",
+    price_value: "", due_date: "", notes: "",
     is_active: true, payment_type: "pix",
   });
 
@@ -50,16 +49,13 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
         name: client.name || "", whatsapp_number: client.whatsapp_number || "",
         plan_id: client.plan_id || "", server_id: client.server_id || "",
         price_value: String(client.price_value || ""), due_date: client.due_date || "",
-        username: client.username || "", suffix: client.suffix || "",
-        password: client.password || "", mac_address: client.mac_address || "",
-        device_key: client.device_key || "", notes: client.notes || "",
+        notes: client.notes || "",
         is_active: client.is_active ?? true, payment_type: client.payment_type || "pix",
       });
     } else {
       setForm({
         name: "", whatsapp_number: "", plan_id: "", server_id: "",
-        price_value: "", due_date: "", username: "", suffix: "",
-        password: "", mac_address: "", device_key: "", notes: "",
+        price_value: "", due_date: "", notes: "",
         is_active: true, payment_type: "pix",
       });
     }
@@ -76,11 +72,6 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
       server_id: form.server_id || null,
       price_value: parseFloat(form.price_value) || 0,
       due_date: form.due_date || null,
-      username: form.username || null,
-      suffix: form.suffix || null,
-      password: form.password || null,
-      mac_address: form.mac_address || null,
-      device_key: form.device_key || null,
       notes: form.notes || null,
       is_active: form.is_active,
       payment_type: form.payment_type,
@@ -119,10 +110,6 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
             <Input value={form.whatsapp_number} onChange={e => set("whatsapp_number", e.target.value)} placeholder="5511999999999" />
           </div>
           <div className="space-y-2">
-            <Label>Username</Label>
-            <Input value={form.username} onChange={e => set("username", e.target.value)} />
-          </div>
-          <div className="space-y-2">
             <Label>Plano</Label>
             <Select value={form.plan_id} onValueChange={v => set("plan_id", v)}>
               <SelectTrigger><SelectValue placeholder="Selecionar plano" /></SelectTrigger>
@@ -147,22 +134,6 @@ export function ClientModal({ open, onClose, client, onSaved }: ClientModalProps
           <div className="space-y-2">
             <Label>Vencimento</Label>
             <Input type="date" value={form.due_date} onChange={e => set("due_date", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Sufixo</Label>
-            <Input value={form.suffix} onChange={e => set("suffix", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Senha</Label>
-            <Input value={form.password} onChange={e => set("password", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>MAC Address</Label>
-            <Input value={form.mac_address} onChange={e => set("mac_address", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Device Key</Label>
-            <Input value={form.device_key} onChange={e => set("device_key", e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Tipo Pagamento</Label>
