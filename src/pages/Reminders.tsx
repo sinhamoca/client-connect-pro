@@ -15,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -32,7 +32,7 @@ const Reminders = () => {
   const [editing, setEditing] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", template_id: "", days_offset: "-3", is_active: true });
+  const [form, setForm] = useState({ name: "", template_id: "", days_offset: "-3", is_active: true, send_time: "08:00" });
 
   const fetchData = async () => {
     if (!user) return;
@@ -54,9 +54,10 @@ const Reminders = () => {
         template_id: editing.template_id || "",
         days_offset: String(editing.days_offset),
         is_active: editing.is_active,
+        send_time: editing.send_time || "08:00",
       });
     } else {
-      setForm({ name: "", template_id: "", days_offset: "-3", is_active: true });
+      setForm({ name: "", template_id: "", days_offset: "-3", is_active: true, send_time: "08:00" });
     }
   }, [editing, modalOpen]);
 
@@ -69,6 +70,7 @@ const Reminders = () => {
       template_id: form.template_id || null,
       days_offset: parseInt(form.days_offset) || 0,
       is_active: form.is_active,
+      send_time: form.send_time,
     };
     const { error } = editing
       ? await supabase.from("reminders").update(payload).eq("id", editing.id)
@@ -112,20 +114,27 @@ const Reminders = () => {
               <TableHead>Nome</TableHead>
               <TableHead>Template</TableHead>
               <TableHead>Quando</TableHead>
+              <TableHead>Horário</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-12"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
             ) : reminders.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Nenhum lembrete configurado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Nenhum lembrete configurado</TableCell></TableRow>
             ) : reminders.map(r => (
               <TableRow key={r.id} className="border-border/30">
                 <TableCell className="font-medium">{r.name}</TableCell>
                 <TableCell className="text-muted-foreground">{r.message_templates?.name || "—"}</TableCell>
                 <TableCell className="text-muted-foreground">{formatOffset(r.days_offset)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{r.send_time || "08:00"}</span>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge variant={r.is_active ? "default" : "secondary"}>
                     {r.is_active ? "Ativo" : "Inativo"}
@@ -162,16 +171,29 @@ const Reminders = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Deslocamento (dias em relação ao vencimento)</Label>
-              <Input
-                type="number"
-                value={form.days_offset}
-                onChange={e => setForm(f => ({ ...f, days_offset: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground">
-                Negativo = antes do vencimento. Ex: -3 = 3 dias antes. 0 = no dia. 1 = 1 dia depois.
-              </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Deslocamento (dias)</Label>
+                <Input
+                  type="number"
+                  value={form.days_offset}
+                  onChange={e => setForm(f => ({ ...f, days_offset: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Negativo = antes. 0 = no dia. Positivo = depois.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Horário de envio</Label>
+                <Input
+                  type="time"
+                  value={form.send_time}
+                  onChange={e => setForm(f => ({ ...f, send_time: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Horário em que as mensagens serão enviadas.
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
