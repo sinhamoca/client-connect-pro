@@ -11,23 +11,30 @@ interface Stats {
   expired: number;
 }
 
+interface Profile {
+  email: string;
+  subscription_end: string | null;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<Stats>({ total: 0, active: 0, inactive: 0, expiring: 0, expired: 0 });
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    const fetchStats = async () => {
-      const { data: clients } = await supabase
-        .from("clients")
-        .select("id, is_active, due_date")
-        .eq("user_id", user.id);
+    const fetchData = async () => {
+      const [{ data: clients }, { data: prof }] = await Promise.all([
+        supabase.from("clients").select("id, is_active, due_date").eq("user_id", user.id),
+        supabase.from("profiles").select("email, subscription_end").eq("user_id", user.id).single(),
+      ]);
+
+      if (prof) setProfile(prof);
 
       if (clients) {
         const now = new Date();
         const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
         setStats({
           total: clients.length,
           active: clients.filter(c => c.is_active).length,
@@ -38,7 +45,7 @@ const Dashboard = () => {
       }
       setLoading(false);
     };
-    fetchStats();
+    fetchData();
   }, [user]);
 
   const statCards = [
@@ -53,7 +60,15 @@ const Dashboard = () => {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral dos seus clientes</p>
+        <p className="text-muted-foreground">{profile?.email || "Carregando..."}</p>
+        {profile?.subscription_end && (
+          <p className="text-sm text-muted-foreground">
+            Plano expira em{" "}
+            <span className="font-medium text-foreground">
+              {new Date(profile.subscription_end).toLocaleDateString("pt-BR")}
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
