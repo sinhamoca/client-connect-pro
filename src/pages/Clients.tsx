@@ -69,6 +69,7 @@ const Clients = () => {
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const [renewingIptvId, setRenewingIptvId] = useState<string | null>(null);
   const [iptvConfirmClient, setIptvConfirmClient] = useState<Client | null>(null);
+  const [renewConfirmClient, setRenewConfirmClient] = useState<Client | null>(null);
   const [panelCredentials, setPanelCredentials] = useState<{ id: string; provider: string; label: string }[]>([]);
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null);
   const [historyClient, setHistoryClient] = useState<Client | null>(null);
@@ -420,7 +421,7 @@ const Clients = () => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => handleRenew(client)}
+                              onClick={() => setRenewConfirmClient(client)}
                               disabled={renewingId === client.id}
                             >
                               {renewingId === client.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -565,6 +566,75 @@ const Clients = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Renewal Confirmation Dialog */}
+      <AlertDialog open={!!renewConfirmClient} onOpenChange={() => setRenewConfirmClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Renovação de Mensalidade</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                {renewConfirmClient && (() => {
+                  const durationMonths = renewConfirmClient.plans?.duration_months || 1;
+                  const now = new Date();
+                  let baseDate: Date;
+                  if (renewConfirmClient.due_date) {
+                    const [y, m, d] = renewConfirmClient.due_date.split("-").map(Number);
+                    const due = new Date(y, m - 1, d);
+                    baseDate = due < now ? now : due;
+                  } else {
+                    baseDate = now;
+                  }
+                  const newDate = new Date(baseDate);
+                  newDate.setMonth(newDate.getMonth() + durationMonths);
+                  const newDueStr = `${String(newDate.getDate()).padStart(2, "0")}/${String(newDate.getMonth() + 1).padStart(2, "0")}/${newDate.getFullYear()}`;
+                  return (
+                    <div className="rounded-lg border border-border p-4 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Cliente:</span>
+                        <span className="font-medium text-foreground">{renewConfirmClient.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Plano:</span>
+                        <span className="font-medium text-foreground">{renewConfirmClient.plans?.name || "Sem plano"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duração:</span>
+                        <span className="font-medium text-foreground">{durationMonths} {durationMonths === 1 ? "mês" : "meses"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Vencimento atual:</span>
+                        <span className="font-medium text-foreground">{renewConfirmClient.due_date ? renewConfirmClient.due_date.split("-").reverse().join("/") : "—"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Novo vencimento:</span>
+                        <span className="font-medium text-primary">{newDueStr}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valor:</span>
+                        <span className="font-medium text-foreground">R$ {Number(renewConfirmClient.price_value).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (renewConfirmClient) {
+                  handleRenew(renewConfirmClient);
+                  setRenewConfirmClient(null);
+                }
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> Renovar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
