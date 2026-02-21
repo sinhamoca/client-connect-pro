@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
     // Build payload
     const payload: any = {
       provider: cred.provider,
+      user_email: user.email,
       credentials: { username: cred.username, password: cred.password },
       client_name: client.name,
       months: plan.duration_months,
