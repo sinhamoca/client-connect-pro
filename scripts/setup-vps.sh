@@ -345,7 +345,7 @@ echo "Aguardando serviços iniciarem..."
 sleep 15
 
 # Verificar se está rodando
-if docker compose ps | grep -q "running"; then
+if docker compose ps --format json 2>/dev/null | grep -qi "running\|healthy\|Up" || docker compose ps 2>/dev/null | grep -qi "Up\|running\|healthy"; then
   print_success "Supabase rodando!"
 else
   print_error "Erro ao iniciar Supabase. Execute 'docker compose logs' em $SUPABASE_DIR"
