@@ -213,6 +213,11 @@ SERVICE_ROLE_KEY=$(generate_jwt "service_role")
 # Configurar .env do Supabase
 cp -f .env.example .env 2>/dev/null || true
 
+VAULT_ENC_KEY=$(openssl rand -hex 32)
+SECRET_KEY_BASE=$(openssl rand -hex 64)
+LOGFLARE_API_KEY=$(openssl rand -hex 32)
+PG_META_CRYPTO_KEY=$(openssl rand -hex 32)
+
 cat > .env << ENVFILE
 ############
 # Secrets
@@ -223,6 +228,9 @@ ANON_KEY=$ANON_KEY
 SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
 DASHBOARD_USERNAME=admin
 DASHBOARD_PASSWORD=$ADMIN_PASSWORD
+VAULT_ENC_KEY=$VAULT_ENC_KEY
+SECRET_KEY_BASE=$SECRET_KEY_BASE
+PG_META_CRYPTO_KEY=$PG_META_CRYPTO_KEY
 
 ############
 # Database
@@ -232,6 +240,15 @@ POSTGRES_DB=postgres
 POSTGRES_PORT=5432
 
 ############
+# Pooler (Supavisor)
+############
+POOLER_TENANT_ID=default
+POOLER_DB_POOL_SIZE=20
+POOLER_MAX_CLIENT_CONN=100
+POOLER_DEFAULT_POOL_SIZE=20
+POOLER_PROXY_PORT_TRANSACTION=6543
+
+############
 # API
 ############
 SITE_URL=http://$DOMAIN:$FRONTEND_PORT
@@ -239,18 +256,68 @@ API_EXTERNAL_URL=http://$DOMAIN:8000
 SUPABASE_PUBLIC_URL=http://$DOMAIN:8000
 
 ############
-# Auth
+# Kong
+############
+KONG_HTTP_PORT=8000
+KONG_HTTPS_PORT=8443
+
+############
+# Auth (GoTrue)
 ############
 GOTRUE_SITE_URL=http://$DOMAIN:$FRONTEND_PORT
 GOTRUE_EXTERNAL_EMAIL_ENABLED=true
-GOTRUE_MAILER_AUTOCONFIRM=false
+GOTRUE_MAILER_AUTOCONFIRM=true
 GOTRUE_SMS_AUTOCONFIRM=false
 GOTRUE_DISABLE_SIGNUP=false
+JWT_EXPIRY=3600
+ENABLE_PHONE_SIGNUP=false
+ENABLE_PHONE_AUTOCONFIRM=false
+ENABLE_EMAIL_SIGNUP=true
+ENABLE_EMAIL_AUTOCONFIRM=true
+ENABLE_ANONYMOUS_USERS=false
+DISABLE_SIGNUP=false
+ADDITIONAL_REDIRECT_URLS=
+MAILER_URLPATHS_CONFIRMATION=/auth/v1/verify
+MAILER_URLPATHS_RECOVERY=/auth/v1/verify
+MAILER_URLPATHS_EMAIL_CHANGE=/auth/v1/verify
+MAILER_URLPATHS_INVITE=/auth/v1/verify
+SMTP_ADMIN_EMAIL=admin@localhost
+SMTP_HOST=supabase-mail
+SMTP_PORT=2500
+SMTP_USER=
+SMTP_PASS=
+SMTP_SENDER_NAME=GestãoPro
+
+############
+# PostgREST
+############
+PGRST_DB_SCHEMAS=public,storage,graphql_public
+
+############
+# Storage
+############
+REGION=local
+S3_PROTOCOL_ACCESS_KEY_ID=storage-key-id
+S3_PROTOCOL_ACCESS_KEY_SECRET=storage-key-secret
+GLOBAL_S3_BUCKET=stub
+STORAGE_TENANT_ID=stub
 
 ############
 # Edge Functions
 ############
 SUPABASE_EDGE_RUNTIME_ENCRYPTION_KEY=$ENCRYPTION_KEY
+FUNCTIONS_VERIFY_JWT=false
+
+############
+# Logflare
+############
+LOGFLARE_PUBLIC_ACCESS_TOKEN=$LOGFLARE_API_KEY
+LOGFLARE_PRIVATE_ACCESS_TOKEN=$LOGFLARE_API_KEY
+
+############
+# Docker
+############
+DOCKER_SOCKET_LOCATION=/var/run/docker.sock
 
 ############
 # Studio (Supabase Dashboard)
