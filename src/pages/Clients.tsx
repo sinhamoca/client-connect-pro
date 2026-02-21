@@ -37,7 +37,7 @@ interface Client {
   server_id: string | null;
   payment_token: string | null;
   payment_type: string | null;
-  plans: { name: string; duration_months: number } | null;
+  plans: { name: string; duration_months: number; panel_credential_id: string | null } | null;
   servers: { name: string } | null;
 }
 
@@ -68,6 +68,8 @@ const Clients = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const [renewingIptvId, setRenewingIptvId] = useState<string | null>(null);
+  const [iptvConfirmClient, setIptvConfirmClient] = useState<Client | null>(null);
+  const [panelCredentials, setPanelCredentials] = useState<{ id: string; provider: string; label: string }[]>([]);
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null);
   const [historyClient, setHistoryClient] = useState<Client | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -88,7 +90,7 @@ const Clients = () => {
     if (!user) return;
     const { data } = await supabase
       .from("clients")
-      .select("*, plans(name, duration_months), servers(name)")
+      .select("*, plans(name, duration_months, panel_credential_id), servers(name)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -140,6 +142,12 @@ const Clients = () => {
         .select("id, name")
         .eq("user_id", user.id);
       setServerOptions(srvs || []);
+
+      const { data: creds } = await supabase
+        .from("panel_credentials")
+        .select("id, provider, label")
+        .eq("user_id", user.id);
+      setPanelCredentials(creds || []);
     };
     init();
   }, [user]);
@@ -425,7 +433,7 @@ const Clients = () => {
                           <TooltipTrigger asChild>
                             <Button
                               variant="ghost" size="icon"
-                              onClick={() => handleRenewIptv(client)}
+                              onClick={() => setIptvConfirmClient(client)}
                               disabled={renewingIptvId === client.id}
                             >
                               {renewingIptvId === client.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tv className="h-4 w-4" />}
@@ -557,6 +565,66 @@ const Clients = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* IPTV Renewal Confirmation Dialog */}
+      <AlertDialog open={!!iptvConfirmClient} onOpenChange={() => setIptvConfirmClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Renovação IPTV</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                {iptvConfirmClient && (() => {
+                  const cred = panelCredentials.find(c => c.id === iptvConfirmClient.plans?.panel_credential_id);
+                  return (
+                    <div className="rounded-lg border border-border p-4 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Cliente:</span>
+                        <span className="font-medium text-foreground">{iptvConfirmClient.name}</span>
+                      </div>
+                      {iptvConfirmClient.username && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Username/ID:</span>
+                          <span className="font-medium text-foreground">{iptvConfirmClient.username}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Plano:</span>
+                        <span className="font-medium text-foreground">{iptvConfirmClient.plans?.name || "Sem plano"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duração:</span>
+                        <span className="font-medium text-foreground">{iptvConfirmClient.plans?.duration_months || 0} {(iptvConfirmClient.plans?.duration_months || 0) === 1 ? "mês" : "meses"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Painel IPTV:</span>
+                        <span className="font-medium text-foreground">{cred ? `${cred.label || cred.provider} (${cred.provider})` : "Não vinculado"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Vencimento atual:</span>
+                        <span className="font-medium text-foreground">{iptvConfirmClient.due_date ? iptvConfirmClient.due_date.split("-").reverse().join("/") : "—"}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <p className="text-muted-foreground text-xs">Isso enviará o comando de renovação para o painel IPTV externo.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (iptvConfirmClient) {
+                  handleRenewIptv(iptvConfirmClient);
+                  setIptvConfirmClient(null);
+                }
+              }}
+            >
+              <Tv className="h-4 w-4 mr-2" /> Renovar IPTV
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
